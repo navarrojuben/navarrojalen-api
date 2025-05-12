@@ -6,29 +6,29 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 
-// ✅ Allow all origins for now (dev + Netlify)
+// ✅ Fully open CORS (for development and deployment)
 app.use(cors({
-  origin: '*', // Allow any origin
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type'],
 }));
 
 app.use(express.json());
 
-// ✅ Add a root test route
+// ✅ Root route for test
 app.get('/', (req, res) => {
-  res.send('<h2>✅ Server is running!</h2>');
+  res.send('<h2>✅ Backend is working and CORS is allowed.</h2>');
 });
 
-// ✅ Mount your actual routes
+// ✅ Use project routes
 app.use('/api/projects', require('./routes/projectRoutes'));
 
-// ✅ Connect to MongoDB
+// ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('🟢 MongoDB connected'))
   .catch(err => console.error('🔴 MongoDB connection error:', err));
 
-// ✅ Use Railway-assigned port or fallback
+// ✅ Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

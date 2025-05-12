@@ -6,14 +6,14 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 
-// Define allowed origins (Netlify and Localhost)
+// Define allowed origins
 const allowedOrigins = [
   'https://navarrojalen.netlify.app',
   'http://localhost:3000'
 ];
 
-// CORS options
-const corsOptions = {
+// CORS setup
+app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -22,28 +22,20 @@ const corsOptions = {
     }
   },
   credentials: true,
-};
+}));
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Allow preflight requests (important for POST/PUT/DELETE with headers)
-app.options('*', cors(corsOptions));
-
-// Middleware
 app.use(express.json());
 
-// Routes
+// ✅ THIS LINE MUST BE RELATIVE — DO NOT USE A FULL URL
 app.use('/api/projects', require('./routes/projectRoutes'));
 
-// MongoDB Connection
+// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-// Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -6,8 +6,26 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 
+// Define allowed origins (Netlify and Localhost)
+const allowedOrigins = [
+  'https://navarrojalen.netlify.app',  // Production (Netlify)
+  'http://localhost:3000'              // Localhost (Development)
+];
+
+// CORS Middleware with allowed origins
+app.use(cors({
+  origin: function(origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      // Allow the request
+      callback(null, true);
+    } else {
+      // Reject the request if the origin is not allowed
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // Routes

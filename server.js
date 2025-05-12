@@ -8,22 +8,27 @@ const app = express();
 
 // Define allowed origins (Netlify and Localhost)
 const allowedOrigins = [
-  'https://navarrojalen.netlify.app',  // Production (Netlify)
-  'http://localhost:3000'              // Localhost (Development)
+  'https://navarrojalen.netlify.app',
+  'http://localhost:3000'
 ];
 
-// CORS Middleware with allowed origins
-app.use(cors({
-  origin: function(origin, callback) {
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      // Allow the request
+// CORS options
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // Reject the request if the origin is not allowed
       callback(new Error('Not allowed by CORS'));
     }
-  }
-}));
+  },
+  credentials: true,
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Allow preflight requests (important for POST/PUT/DELETE with headers)
+app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(express.json());
@@ -32,9 +37,13 @@ app.use(express.json());
 app.use('/api/projects', require('./routes/projectRoutes'));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error(err));
+  .catch(err => console.error('MongoDB connection error:', err));
 
+// Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

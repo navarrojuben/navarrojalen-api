@@ -6,27 +6,15 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 
-// Define allowed origins
-const allowedOrigins = [
-  'https://navarrojalen.netlify.app',
-  'http://localhost:3000'
-];
-
-// CORS setup
+// Allow all origins (open CORS policy)
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: '*',  // This will allow all domains
   credentials: true,
 }));
 
 app.use(express.json());
 
-// ✅ THIS LINE MUST BE RELATIVE — DO NOT USE A FULL URL
+// Routes
 app.use('/api/projects', require('./routes/projectRoutes'));
 
 // MongoDB connection

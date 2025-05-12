@@ -1,52 +1,35 @@
-require('dotenv').config();
-
 const express = require('express');
-const cors = require('cors');
 const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
+dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5000;
 
+// ✅ Allow all origins for now (dev + Netlify)
+app.use(cors({
+  origin: '*', // Allow any origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-
-const corsOptions = {
-  origin: '*', // Allow all origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  credentials: true,
-};
-
-app.get('/', (req, res) => {
-  res.send('<h2>✅ Server is up and running.</h2>');
-});
-
-// Apply CORS middleware
-app.use(cors());
-
-// Middleware for handling JSON
 app.use(express.json());
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`Request made to: ${req.method} ${req.url}`);
-  next();
+// ✅ Add a root test route
+app.get('/', (req, res) => {
+  res.send('<h2>✅ Server is running!</h2>');
 });
 
-// Define routes
-const projectRoutes  = require('./routes/projectRoutes');
+// ✅ Mount your actual routes
+app.use('/api/projects', require('./routes/projectRoutes'));
 
+// ✅ Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('🟢 MongoDB connected'))
+  .catch(err => console.error('🔴 MongoDB connection error:', err));
 
-// Routes
-app.use('/api/projects',   projectRoutes);
-
-
-
-// Connect to the database
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log('Connected to DB & listening on port', PORT);
-    });
-  })
-  .catch((error) => {
-    console.log('Database connection error:', error);
-  });
+// ✅ Use Railway-assigned port or fallback
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

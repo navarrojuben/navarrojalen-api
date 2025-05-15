@@ -15,13 +15,22 @@ app.use(cors({
 
 app.use(express.json());
 
+
+
+
 // ✅ Root route for test
 app.get('/', (req, res) => {
   res.send('<h2>✅ Backend is working and CORS is allowed.</h2>');
 });
 
+
+
+
 // ✅ Use project routes
 app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api/links',    require('./routes/linkRoutes'));
+
+
 
 // ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

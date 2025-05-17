@@ -9,7 +9,7 @@ const app = express();
 // ✅ Fully open CORS (for development and deployment)
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type'],
 }));
 

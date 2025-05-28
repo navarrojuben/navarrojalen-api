@@ -27,6 +27,8 @@ app.get('/', (req, res) => {
 // ✅ Use project routes
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/links',    require('./routes/linkRoutes'));
+app.use('/api/codes',    require('./routes/codeRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
 
 
 

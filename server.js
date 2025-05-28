@@ -16,7 +16,7 @@ app.use(express.json());
 
 
 
-// ✅ Root route for test
+// ✅ Root route for tests
 app.get('/', (req, res) => {
   res.send('<h2>✅ Backend is working and CORS is allowed.</h2>');
 });

@@ -16,7 +16,7 @@ app.use(express.json());
 
 
 
-// ✅ Root route for test
+// ✅ Root route for tests
 app.get('/', (req, res) => {
   res.send('<h2>✅ Backend is working and CORS is allowed.</h2>');
 });
@@ -27,6 +27,9 @@ app.get('/', (req, res) => {
 // ✅ Use project routes
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/links',    require('./routes/linkRoutes'));
+app.use('/api/codes',    require('./routes/codeRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/dates',    require('./routes/dateRoutes'));
 
 
 

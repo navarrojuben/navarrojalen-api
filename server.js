@@ -30,6 +30,7 @@ app.use('/api/links',    require('./routes/linkRoutes'));
 app.use('/api/codes',    require('./routes/codeRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/dates',    require('./routes/dateRoutes'));
+app.use('/api/notes',    require('./routes/noteRoutes'));
 
 
 

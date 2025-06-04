@@ -1,4 +1,4 @@
-const DateModel = require('../models/dateModel');
+const DateModel = require('../models/DateModel');
 
 // Create a new date
 const createDate = async (req, res) => {

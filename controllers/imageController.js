@@ -16,28 +16,26 @@ exports.getImages = async (req, res) => {
 // POST upload image
 exports.uploadImage = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).send('No file uploaded');
+    console.log('📦 Uploaded file:', req.file);
+    console.log('📨 Body:', req.body);
 
-    const { name, description, tags } = req.body;
-    const tagArray = tags ? JSON.parse(tags) : [];
-
-    console.log('req.file:', req.file); // check if secure_url and public_id exist
-
-    const newImage = new Image({
-      name,
-      description,
-      tags: tagArray,
-      url: req.file.secure_url,        // 🔥 fix here
-      public_id: req.file.public_id,   // 🔥 fix here
+    const image = new Image({
+      name: req.body.name,
+      description: req.body.description || '',
+      tags: JSON.parse(req.body.tags || '[]'),
+      url: req.file.path,
+      public_id: req.file.filename,
     });
 
-    const savedImage = await newImage.save();
-    res.json(savedImage);
+    const saved = await image.save();
+    res.status(201).json(saved);
   } catch (err) {
-    console.error('Upload error:', err.message || err);
-    res.status(500).send('Server error');
+    console.error('🔥 Upload error:', err);
+    res.status(500).json({ message: err.message });
   }
 };
+
+
 
 
 

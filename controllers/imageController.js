@@ -25,8 +25,8 @@ exports.uploadImage = async (req, res) => {
       name,
       description,
       tags: tagArray,
-      url: req.file.path,
-      public_id: req.file.filename,
+      url: req.file.path || req.file.secure_url, // use secure_url from Cloudinary
+      public_id: req.file.filename || req.file.public_id, // Cloudinary public ID
     });
 
     const savedImage = await newImage.save();
@@ -36,6 +36,7 @@ exports.uploadImage = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
 
 // PATCH update image info
 exports.updateImage = async (req, res) => {

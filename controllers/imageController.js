@@ -19,23 +19,27 @@ exports.uploadImage = async (req, res) => {
     if (!req.file) return res.status(400).send('No file uploaded');
 
     const { name, description, tags } = req.body;
-    const tagArray = tags ? tags.split(',').map(tag => tag.trim()) : [];
+    const tagArray = tags ? JSON.parse(tags) : [];
+
+    console.log('req.file:', req.file); // check if secure_url and public_id exist
 
     const newImage = new Image({
       name,
       description,
       tags: tagArray,
-      url: req.file.path || req.file.secure_url, // use secure_url from Cloudinary
-      public_id: req.file.filename || req.file.public_id, // Cloudinary public ID
+      url: req.file.secure_url,        // 🔥 fix here
+      public_id: req.file.public_id,   // 🔥 fix here
     });
 
     const savedImage = await newImage.save();
     res.json(savedImage);
   } catch (err) {
-    console.error('Upload error:', err);
+    console.error('Upload error:', err.message || err);
     res.status(500).send('Server error');
   }
 };
+
+
 
 
 // PATCH update image info

@@ -25,15 +25,14 @@ app.get('/', (req, res) => {
 
 
 // ✅ Use project routes
-app.use('/api/projects', require('./routes/projectRoutes'));
-app.use('/api/links',    require('./routes/linkRoutes'));
-app.use('/api/codes',    require('./routes/codeRoutes'));
-app.use('/api/messages', require('./routes/messageRoutes'));
-app.use('/api/dates',    require('./routes/dateRoutes'));
-app.use('/api/notes',    require('./routes/noteRoutes'));
-app.use('/api/images',       require('./routes/imageRoute'));
-
-
+app.use('/api/projects',          require('./routes/projectRoutes'));
+app.use('/api/links',             require('./routes/linkRoutes'));
+app.use('/api/codes',             require('./routes/codeRoutes'));
+app.use('/api/messages',          require('./routes/messageRoutes'));
+app.use('/api/dates',             require('./routes/dateRoutes'));
+app.use('/api/notes',             require('./routes/noteRoutes'));
+app.use('/api/images',            require('./routes/imageRoute'));
+app.use('/api/image-categories',  require('./routes/imageCategoryRoutes'));
 
 // ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

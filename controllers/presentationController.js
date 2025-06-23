@@ -34,6 +34,26 @@ exports.getPresentationById = async (req, res) => {
   }
 };
 
+// Get a single presentation by Title (slug-safe)
+exports.getPresentationByTitle = async (req, res) => {
+  try {
+    const rawSlug = decodeURIComponent(req.params.title); // e.g. "test-1"
+
+    const presentation = await Presentation.findOne({
+      title: { $regex: new RegExp(`^${rawSlug}$`, 'i') } // case-insensitive exact match
+    });
+
+    if (!presentation) {
+      return res.status(404).json({ error: "Presentation not found" });
+    }
+
+    res.status(200).json(presentation);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
 // Update a presentation by ID
 exports.updatePresentation = async (req, res) => {
   try {

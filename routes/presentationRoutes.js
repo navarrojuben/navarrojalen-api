@@ -19,6 +19,9 @@ router.get("/", getAllPresentations);
 // ✅ Read by title (must come before `/:id` to avoid route conflict)
 router.get("/title/:title", getPresentationByTitle);
 
+// Alias route for legacy/frontend
+router.get("/view/:title", getPresentationByTitle); // 👈 Add this
+
 // Read one by ID
 router.get("/:id", getPresentationById);
 

@@ -6,18 +6,22 @@ const presentationSchema = new mongoose.Schema({
     required: true,
   },
   photos: {
-    type: [String], // array of image URLs
+    type: [String],
     required: true,
-    validate: [arr => arr.length > 0, "At least one photo is required"]
+    validate: [arr => arr.length > 0, "At least one photo is required"],
   },
-  musicUrl: {
-    type: String,
-    default: "",
+  musicUrls: {
+    type: [String], // ✅ changed from musicUrl: String
+    default: [],
+    validate: {
+      validator: (arr) => Array.isArray(arr) && arr.every(url => typeof url === "string"),
+      message: "All music URLs must be strings",
+    },
   },
   slideDuration: {
     type: Number,
     default: 3,
-    min: 1
+    min: 1,
   },
   createdAt: {
     type: Date,

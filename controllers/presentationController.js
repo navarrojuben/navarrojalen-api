@@ -1,15 +1,40 @@
 const Presentation = require("../models/Presentation");
 
+// Utility function to normalize music URLs
+const normalizeMusicUrls = (musicUrl, musicUrls) => {
+  const urls = [];
+
+  if (Array.isArray(musicUrls)) {
+    urls.push(...musicUrls.map((url) => url.trim()).filter(Boolean));
+  }
+
+  if (typeof musicUrl === 'string' && musicUrl.trim()) {
+    urls.push(musicUrl.trim());
+  }
+
+  // Remove duplicates
+  return [...new Set(urls)];
+};
+
+
 // Create a new presentation
 exports.createPresentation = async (req, res) => {
   try {
-    const presentation = new Presentation(req.body);
+    const { title, photos, musicUrl, musicUrls, slideDuration } = req.body;
+    const payload = {
+      title,
+      photos,
+      musicUrls: normalizeMusicUrls(musicUrl, musicUrls),
+      slideDuration,
+    };
+    const presentation = new Presentation(payload);
     const saved = await presentation.save();
     res.status(201).json(saved);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 // Get all presentations
 exports.getAllPresentations = async (req, res) => {
@@ -57,19 +82,30 @@ exports.getPresentationByTitle = async (req, res) => {
 // Update a presentation by ID
 exports.updatePresentation = async (req, res) => {
   try {
+    const { title, photos, musicUrl, musicUrls, slideDuration } = req.body;
+    const payload = {
+      ...(title && { title }),
+      ...(photos && { photos }),
+      musicUrls: normalizeMusicUrls(musicUrl, musicUrls),
+      ...(slideDuration && { slideDuration }),
+    };
+
     const updated = await Presentation.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      payload,
       { new: true, runValidators: true }
     );
+
     if (!updated) {
       return res.status(404).json({ error: "Presentation not found" });
     }
+
     res.status(200).json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 // Delete a presentation by ID
 exports.deletePresentation = async (req, res) => {

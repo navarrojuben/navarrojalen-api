@@ -6,12 +6,22 @@ const presentationSchema = new mongoose.Schema({
     required: true,
   },
   photos: {
-    type: [String],
-    required: true,
+    type: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        order: {
+          type: Number,
+          required: true,
+        },
+      }
+    ],
     validate: [arr => arr.length > 0, "At least one photo is required"],
   },
   musicUrls: {
-    type: [String], // ✅ changed from musicUrl: String
+    type: [String],
     default: [],
     validate: {
       validator: (arr) => Array.isArray(arr) && arr.every(url => typeof url === "string"),

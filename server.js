@@ -35,6 +35,9 @@ app.use('/api/images',            require('./routes/imageRoute'));
 app.use('/api/presentations',      require('./routes/presentationRoutes'));
 app.use('/api/image-categories',  require('./routes/imageCategoryRoutes'));
 
+app.use('/api/resume',            require('./routes/resumeRoutes'));
+
+
 // ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('🟢 MongoDB connected'))

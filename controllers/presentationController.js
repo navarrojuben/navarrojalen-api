@@ -1,6 +1,6 @@
 const Presentation = require("../models/Presentation");
 
-// Utility function to normalize music URLs
+// Utility: Normalize music URLs
 const normalizeMusicUrls = (musicUrl, musicUrls) => {
   const urls = [];
 
@@ -12,21 +12,35 @@ const normalizeMusicUrls = (musicUrl, musicUrls) => {
     urls.push(musicUrl.trim());
   }
 
-  // Remove duplicates
   return [...new Set(urls)];
 };
 
+// Utility: Normalize photo objects
+const normalizePhotos = (photos) => {
+  if (!Array.isArray(photos)) return [];
+  return photos.map((photo, index) => {
+    if (typeof photo === 'string') {
+      return { url: photo.trim(), order: index };
+    }
+    return {
+      url: (photo.url || '').trim(),
+      order: typeof photo.order === 'number' ? photo.order : index,
+    };
+  });
+};
 
 // Create a new presentation
 exports.createPresentation = async (req, res) => {
   try {
     const { title, photos, musicUrl, musicUrls, slideDuration } = req.body;
+
     const payload = {
       title,
-      photos,
+      photos: normalizePhotos(photos),
       musicUrls: normalizeMusicUrls(musicUrl, musicUrls),
       slideDuration,
     };
+
     const presentation = new Presentation(payload);
     const saved = await presentation.save();
     res.status(201).json(saved);
@@ -34,7 +48,6 @@ exports.createPresentation = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
-
 
 // Get all presentations
 exports.getAllPresentations = async (req, res) => {
@@ -59,13 +72,13 @@ exports.getPresentationById = async (req, res) => {
   }
 };
 
-// Get a single presentation by Title (slug-safe)
+// Get a single presentation by title (slug-safe)
 exports.getPresentationByTitle = async (req, res) => {
   try {
-    const rawSlug = decodeURIComponent(req.params.title); // e.g. "test-1"
+    const rawSlug = decodeURIComponent(req.params.title);
 
     const presentation = await Presentation.findOne({
-      title: { $regex: new RegExp(`^${rawSlug}$`, 'i') } // case-insensitive exact match
+      title: { $regex: new RegExp(`^${rawSlug}$`, 'i') }
     });
 
     if (!presentation) {
@@ -78,14 +91,14 @@ exports.getPresentationByTitle = async (req, res) => {
   }
 };
 
-
 // Update a presentation by ID
 exports.updatePresentation = async (req, res) => {
   try {
     const { title, photos, musicUrl, musicUrls, slideDuration } = req.body;
+
     const payload = {
       ...(title && { title }),
-      ...(photos && { photos }),
+      ...(photos && { photos: normalizePhotos(photos) }),
       musicUrls: normalizeMusicUrls(musicUrl, musicUrls),
       ...(slideDuration && { slideDuration }),
     };
@@ -105,7 +118,6 @@ exports.updatePresentation = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
-
 
 // Delete a presentation by ID
 exports.deletePresentation = async (req, res) => {

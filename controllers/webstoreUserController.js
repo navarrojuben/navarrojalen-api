@@ -37,7 +37,7 @@ exports.registerUser = async (req, res) => {
       message: 'Registration successful',
       token,
       user: {
-        id: newUser._id,
+        _id: newUser._id,
         username: newUser.username,
         email: newUser.email,
         name: newUser.name,
@@ -53,8 +53,6 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// @desc Login user
-// @route POST /api/webstore-users/login
 // @desc Login user (by email or username)
 // @route POST /api/webstore-users/login
 exports.loginUser = async (req, res) => {
@@ -83,7 +81,7 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         name: user.name,
@@ -99,7 +97,6 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-
 // @desc Get user info (requires JWT token)
 // @route GET /api/webstore-users/userinfo
 exports.getUserInfo = async (req, res) => {
@@ -108,7 +105,7 @@ exports.getUserInfo = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     res.status(200).json({
-      id: user._id,
+      _id: user._id,
       username: user.username,
       email: user.email,
       name: user.name,
@@ -209,7 +206,7 @@ exports.updateUserProfile = async (req, res) => {
     res.status(200).json({
       message: 'Profile updated',
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         name: user.name,

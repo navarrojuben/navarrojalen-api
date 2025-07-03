@@ -26,32 +26,21 @@ const getAllOrders = async (req, res) => {
  * @route   POST /api/webstore-orders
  */
 const createOrder = async (req, res) => {
-  const {
-    items,
-    totalAmount,
-    note,
-    customerName,
-    customerEmail,
-    customerAddress,
-  } = req.body;
+  const { user, items, total, note } = req.body;
 
-  // Validate required fields
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: 'Items array is required' });
-  }
-
-  if (!totalAmount || !customerName || !customerEmail) {
+  if (
+    !user || !user._id || !user.username || !user.email ||
+    !Array.isArray(items) || items.length === 0 || !total
+  ) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
   try {
     const newOrder = await WebstoreOrder.create({
+      user,
       items,
-      totalAmount,
+      total,
       note: note || '',
-      customerName,
-      customerEmail,
-      customerAddress: customerAddress || '',
     });
 
     res.status(201).json(newOrder);
@@ -62,7 +51,7 @@ const createOrder = async (req, res) => {
 };
 
 /**
- * @desc    Get orders for a specific email (instead of customerId)
+ * @desc    Get orders by user email
  * @route   GET /api/webstore-orders/my-orders?email=xxx
  */
 const getUserOrders = async (req, res) => {
@@ -73,7 +62,7 @@ const getUserOrders = async (req, res) => {
   }
 
   try {
-    const orders = await WebstoreOrder.find({ customerEmail: email }).sort({ createdAt: -1 });
+    const orders = await WebstoreOrder.find({ 'user.email': email }).sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch user orders', error: err.message });
@@ -95,7 +84,7 @@ const getOrderById = async (req, res) => {
 };
 
 /**
- * @desc    Update an order (Admin only)
+ * @desc    Update order status (Admin only)
  * @route   PUT /api/webstore-orders/:id
  */
 const updateOrderStatus = async (req, res) => {
@@ -106,7 +95,7 @@ const updateOrderStatus = async (req, res) => {
   try {
     const updatedOrder = await WebstoreOrder.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      { status: req.body.status },
       { new: true, runValidators: true }
     );
 
@@ -142,7 +131,6 @@ const deleteOrder = async (req, res) => {
   }
 };
 
-// Export all controller functions
 module.exports = {
   createOrder,
   getAllOrders,

@@ -1,7 +1,7 @@
-// middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
+const User = require('../models/webstoreUserModel');
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,10 +12,29 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({ message: 'Your account is banned' });
+    }
+
+    req.user = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      njCredits: user.njCredits,
+      avatar: user.avatar,
+    };
+
     next();
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid token' });
+    const msg = err.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token';
+    return res.status(401).json({ message: msg });
   }
 };
 

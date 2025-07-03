@@ -62,7 +62,8 @@ app.use('/api/', require('./routes/resumeRoutes'));
 
 app.use('/api/webstore-users',    require('./routes/webstoreUserRoutes'));
 app.use('/api/webstore-services', require('./routes/webstoreServiceRoutes'));
-
+app.use('/api/webstore-credits',  require('./routes/webstoreCreditRoutes'));
+app.use('/api/webstore-orders',   require('./routes/webstoreOrderRoutes'));
 
 // ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {

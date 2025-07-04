@@ -6,11 +6,12 @@ const {
   getOrderById,
   updateOrderStatus,
   deleteOrder,
+  getCooldownInfo, // ✅ FIXED NAME
 } = require('../controllers/webstoreOrderController');
 
 const router = express.Router();
 
-// Utility middleware to check if the request is from admin
+// Middleware: Verify admin requests
 const isFromAdminFrontend = (req, res, next) => {
   if (req.headers['x-admin-auth'] !== 'navarrojuben') {
     return res.status(403).json({ message: 'Admin access denied' });
@@ -18,13 +19,16 @@ const isFromAdminFrontend = (req, res, next) => {
   next();
 };
 
-// Create a new order (public or logged-in users depending on frontend handling)
+// Create a new order
 router.post('/', createOrder);
 
 // Get all orders (admin only)
 router.get('/', isFromAdminFrontend, getAllOrders);
 
-// Get current user's orders (frontend must send userId in header or query)
+// Get cooldown info for a user (must come before /:id to avoid conflict)
+router.get('/cooldown', getCooldownInfo); // ✅ use getCooldownInfo
+
+// Get current user's orders
 router.get('/my-orders', getUserOrders);
 
 // Get one order by ID

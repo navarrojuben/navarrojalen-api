@@ -1,4 +1,6 @@
 const User = require('../models/webstoreUserModel');
+const WebstoreChat = require('../models/webstoreChatModel');
+const Order = require('../models/webstoreOrderModel');
 const jwt = require('jsonwebtoken');
 
 // Create JWT
@@ -165,7 +167,7 @@ exports.updateCredits = async (req, res) => {
   }
 };
 
-// @desc Delete a user (admin only)
+// ✅ @desc Delete a user and associated messages & orders (admin only)
 // @route DELETE /api/webstore-users/:id
 exports.deleteUser = async (req, res) => {
   const isFromAdminFrontend = req.headers['x-admin-auth'] === 'navarrojuben';
@@ -176,13 +178,27 @@ exports.deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    // ✅ Delete WebstoreChat messages
+    const deletedMessages = await WebstoreChat.deleteMany({ user: id });
+
+    // ✅ Delete WebstoreOrders with subdocument user._id match
+    const deletedOrders = await Order.deleteMany({ 'user._id': id });
+
+    // ✅ Delete the user last
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: `User ${user.username} deleted successfully.`,
+      deletedMessages: deletedMessages.deletedCount,
+      deletedOrders: deletedOrders.deletedCount,
+    });
   } catch (err) {
+    console.error('❌ Error deleting user:', err);
     res.status(500).json({ message: 'Failed to delete user', error: err.message });
   }
 };

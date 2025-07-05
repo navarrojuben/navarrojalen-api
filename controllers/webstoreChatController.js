@@ -63,7 +63,7 @@ const getLatestMessageTimestamp = async (req, res) => {
   }
 };
 
-// ✅ FIXED: GET /api/webstore-chat/admin/latest-messages
+// GET /api/webstore-chat/admin/latest-messages
 const getLatestMessagesForAllUsers = async (req, res) => {
   try {
     const latestPerUser = await WebstoreChat.aggregate([
@@ -83,9 +83,49 @@ const getLatestMessagesForAllUsers = async (req, res) => {
       },
     ]);
 
-    res.status(200).json(latestPerUser); // ✅ returns array: [{ userId, lastMessageTime }]
+    res.status(200).json(latestPerUser);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch latest messages for all users', error: err.message });
+  }
+};
+
+// DELETE /api/webstore-chat/by-user/:userId
+const deleteMessagesByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const result = await WebstoreChat.deleteMany({ user: userId });
+    res.status(200).json({ deletedMessages: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete messages', error: err.message });
+  }
+};
+
+// ✅ DELETE /api/webstore-chat/by-ids
+const deleteMessagesByIds = async (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: 'No message IDs provided' });
+  }
+
+  try {
+    const result = await WebstoreChat.deleteMany({ _id: { $in: ids } });
+    res.status(200).json({ deletedMessages: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete messages by IDs', error: err.message });
+  }
+};
+
+// GET /api/webstore-chat/user/:userId/count
+const getMessageCountByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const count = await WebstoreChat.countDocuments({ user: userId });
+    res.status(200).json({ count });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to get message count', error: err.message });
   }
 };
 
@@ -96,4 +136,7 @@ module.exports = {
   markAsRead,
   getLatestMessageTimestamp,
   getLatestMessagesForAllUsers,
+  deleteMessagesByUserId,
+  deleteMessagesByIds, // ✅ export bulk delete
+  getMessageCountByUserId,
 };

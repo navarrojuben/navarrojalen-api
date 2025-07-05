@@ -50,9 +50,50 @@ const markAsRead = async (req, res) => {
   }
 };
 
+// GET /api/webstore-chat/latest-message/:userId
+const getLatestMessageTimestamp = async (req, res) => {
+  try {
+    const latest = await WebstoreChat.findOne({ user: req.params.userId })
+      .sort({ createdAt: -1 })
+      .select('createdAt');
+
+    res.status(200).json({ createdAt: latest?.createdAt || null });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch latest message', error: err.message });
+  }
+};
+
+// ✅ FIXED: GET /api/webstore-chat/admin/latest-messages
+const getLatestMessagesForAllUsers = async (req, res) => {
+  try {
+    const latestPerUser = await WebstoreChat.aggregate([
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$user',
+          lastMessageTime: { $first: '$createdAt' },
+        },
+      },
+      {
+        $project: {
+          userId: '$_id',
+          lastMessageTime: 1,
+          _id: 0,
+        },
+      },
+    ]);
+
+    res.status(200).json(latestPerUser); // ✅ returns array: [{ userId, lastMessageTime }]
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch latest messages for all users', error: err.message });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessagesByUser,
   getAllMessages,
   markAsRead,
+  getLatestMessageTimestamp,
+  getLatestMessagesForAllUsers,
 };

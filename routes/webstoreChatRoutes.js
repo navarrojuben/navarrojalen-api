@@ -5,18 +5,26 @@ const {
   getMessagesByUser,
   getAllMessages,
   markAsRead,
+  getLatestMessageTimestamp,
+  getLatestMessagesForAllUsers,
 } = require('../controllers/webstoreChatController');
 
-// User sends a message
+// 📩 Send a message
 router.post('/', sendMessage);
 
-// User fetches their messages
+// 📬 Get messages by user
 router.get('/my/:userId', getMessagesByUser);
 
-// Admin fetches all messages
+// 📁 Admin: get all messages (with users populated)
 router.get('/admin/all', getAllMessages);
 
-// Mark message(s) as read
+// ✅ Mark all unread messages as read for a user
 router.put('/read/:userId', markAsRead);
+
+// 🕒 Get latest message timestamp for a specific user
+router.get('/latest-message/:userId', getLatestMessageTimestamp);
+
+// 🗂️ Get latest message timestamps for all users
+router.get('/admin/latest-messages', getLatestMessagesForAllUsers);
 
 module.exports = router;

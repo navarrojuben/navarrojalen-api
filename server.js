@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// 🟢 Dynamically determine allowed origins
+// Allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
   'https://navarrojalen.netlify.app',
@@ -20,7 +20,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
-// 🧩 CORS Middleware
+// CORS Middleware
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -32,7 +32,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// 🍪 Session Configuration
+// Session Configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'keyboard cat',
   resave: false,
@@ -44,10 +44,9 @@ app.use(session({
   },
 }));
 
-// 🧠 JSON Body Parser
 app.use(express.json());
 
-// 🔌 Socket.io Setup
+// Socket.io Setup
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -56,17 +55,23 @@ const io = new Server(server, {
   },
 });
 
-const onlineUsers = new Map();
-const typingUsers = new Set();
+const onlineUsers = new Map(); // userId => socket.id
 
 io.on('connection', (socket) => {
+  let currentUserId = null;
+
   socket.on('join', async ({ userId, isAdmin }) => {
-    socket.userId = userId;
     socket.isAdmin = isAdmin;
+
+    if (userId) {
+      socket.userId = userId;
+      currentUserId = userId;
+    }
 
     if (isAdmin) {
       socket.join('admin-room');
-    } else {
+      socket.emit('user-online', Array.from(onlineUsers.keys())); // send full list
+    } else if (userId) {
       socket.join(userId);
       onlineUsers.set(userId, socket.id);
       io.to('admin-room').emit('user-online', Array.from(onlineUsers.keys()));
@@ -77,6 +82,16 @@ io.on('connection', (socket) => {
       } catch (err) {
         console.error('❌ Chat history error:', err.message);
       }
+    }
+  });
+
+  // Admin request history (without joining user room)
+  socket.on('get-history', async ({ userId }) => {
+    try {
+      const history = await WebstoreChat.find({ user: userId }).sort({ createdAt: 1 });
+      socket.emit('chat-history', history);
+    } catch (err) {
+      console.error('❌ Admin get-history error:', err.message);
     }
   });
 
@@ -97,8 +112,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('typing', ({ userId, isTyping }) => {
+    if (!userId) return;
+
     if (socket.isAdmin) {
-      io.to(userId).emit('typing', { isTyping: true });
+      io.to(userId).emit('typing', { userId: 'admin', isTyping });
     } else {
       io.to('admin-room').emit('typing', { userId, isTyping });
     }
@@ -106,22 +123,24 @@ io.on('connection', (socket) => {
 
   socket.on('mark-read', ({ userId }) => {
     io.to('admin-room').emit('message-read', { userId });
+    io.to(userId).emit('message-read-confirmed');
   });
 
   socket.on('disconnect', () => {
-    if (socket.userId && !socket.isAdmin) {
-      onlineUsers.delete(socket.userId);
+    const uid = socket.userId || currentUserId;
+    if (uid && !socket.isAdmin) {
+      onlineUsers.delete(uid);
       io.to('admin-room').emit('user-online', Array.from(onlineUsers.keys()));
     }
   });
 });
 
-// 🧪 Health Check
+// Health Check
 app.get('/', (req, res) => {
   res.send('<h2>✅ Backend is working.</h2>');
 });
 
-// 📦 Routes
+// Routes
 app.use('/api/projects',         require('./routes/projectRoutes'));
 app.use('/api/links',            require('./routes/linkRoutes'));
 app.use('/api/codes',            require('./routes/codeRoutes'));
@@ -140,7 +159,7 @@ app.use('/api/webstore-credits',  require('./routes/webstoreCreditRoutes'));
 app.use('/api/webstore-orders',   require('./routes/webstoreOrderRoutes'));
 app.use('/api/webstore-chat',     require('./routes/webstoreChatRoutes'));
 
-// 🛢️ MongoDB Connection
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,

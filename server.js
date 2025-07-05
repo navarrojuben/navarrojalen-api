@@ -65,7 +65,7 @@ io.on('connection', (socket) => {
 
     if (isAdmin) {
       socket.join('admin-room');
-      socket.emit('user-online', Array.from(onlineUsers.keys())); // initial sync only
+      socket.emit('user-online', Array.from(onlineUsers.keys()));
     } else {
       socket.join(userId);
       onlineUsers.set(userId, socket.id);
@@ -73,18 +73,28 @@ io.on('connection', (socket) => {
 
       try {
         const history = await WebstoreChat.find({ user: userId }).sort({ createdAt: 1 });
-        socket.emit('chat-history', history);
+        socket.emit('chat-history', history.map(m => ({
+          ...m.toObject(),
+          _id: m._id.toString(),
+          user: m.user.toString(),
+          createdAt: m.createdAt.toISOString(),
+        })));
       } catch (err) {
         console.error('❌ Chat history error:', err.message);
       }
     }
   });
 
-  // 🆕 Admin requesting history without faking a join
+  // Admin requesting history
   socket.on('get-history', async ({ userId }) => {
     try {
       const history = await WebstoreChat.find({ user: userId }).sort({ createdAt: 1 });
-      socket.emit('chat-history', history);
+      socket.emit('chat-history', history.map(m => ({
+        ...m.toObject(),
+        _id: m._id.toString(),
+        user: m.user.toString(),
+        createdAt: m.createdAt.toISOString(),
+      })));
     } catch (err) {
       console.error('❌ Admin get-history error:', err.message);
     }
@@ -96,11 +106,16 @@ io.on('connection', (socket) => {
 
     try {
       const newMessage = await WebstoreChat.create({ user: userId, message, sender });
+      const formatted = {
+        ...newMessage.toObject(),
+        _id: newMessage._id.toString(),
+        user: newMessage.user.toString(),
+        createdAt: newMessage.createdAt.toISOString(),
+      };
 
-      io.to(userId).emit('new-message', newMessage);
-      io.to('admin-room').emit('new-message', newMessage);
+      io.to(userId).emit('new-message', formatted);
+      io.to('admin-room').emit('new-message', formatted);
 
-      // Optional: notify read receipt if admin sends
       if (sender === 'admin') {
         io.to('admin-room').emit('message-read', { userId });
       }

@@ -46,7 +46,7 @@ app.use(session({
 
 app.use(express.json());
 
-// Socket.io Setup
+// 🔌 Socket.io
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -58,20 +58,15 @@ const io = new Server(server, {
 const onlineUsers = new Map(); // userId => socket.id
 
 io.on('connection', (socket) => {
-  let currentUserId = null;
-
+  // JOIN room
   socket.on('join', async ({ userId, isAdmin }) => {
+    socket.userId = userId;
     socket.isAdmin = isAdmin;
-
-    if (userId) {
-      socket.userId = userId;
-      currentUserId = userId;
-    }
 
     if (isAdmin) {
       socket.join('admin-room');
-      socket.emit('user-online', Array.from(onlineUsers.keys())); // send full list
-    } else if (userId) {
+      socket.emit('user-online', Array.from(onlineUsers.keys())); // initial sync only
+    } else {
       socket.join(userId);
       onlineUsers.set(userId, socket.id);
       io.to('admin-room').emit('user-online', Array.from(onlineUsers.keys()));
@@ -85,7 +80,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Admin request history (without joining user room)
+  // 🆕 Admin requesting history without faking a join
   socket.on('get-history', async ({ userId }) => {
     try {
       const history = await WebstoreChat.find({ user: userId }).sort({ createdAt: 1 });
@@ -95,14 +90,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Send message
   socket.on('send-message', async ({ userId, message, sender }) => {
     if (!userId || !message || !sender) return;
 
     try {
       const newMessage = await WebstoreChat.create({ user: userId, message, sender });
+
       io.to(userId).emit('new-message', newMessage);
       io.to('admin-room').emit('new-message', newMessage);
 
+      // Optional: notify read receipt if admin sends
       if (sender === 'admin') {
         io.to('admin-room').emit('message-read', { userId });
       }
@@ -111,6 +109,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Typing indicators
   socket.on('typing', ({ userId, isTyping }) => {
     if (!userId) return;
 
@@ -121,15 +120,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Mark as read
   socket.on('mark-read', ({ userId }) => {
     io.to('admin-room').emit('message-read', { userId });
     io.to(userId).emit('message-read-confirmed');
   });
 
+  // Disconnect handler
   socket.on('disconnect', () => {
-    const uid = socket.userId || currentUserId;
-    if (uid && !socket.isAdmin) {
-      onlineUsers.delete(uid);
+    if (socket.userId && !socket.isAdmin) {
+      onlineUsers.delete(socket.userId);
       io.to('admin-room').emit('user-online', Array.from(onlineUsers.keys()));
     }
   });
@@ -159,7 +159,7 @@ app.use('/api/webstore-credits',  require('./routes/webstoreCreditRoutes'));
 app.use('/api/webstore-orders',   require('./routes/webstoreOrderRoutes'));
 app.use('/api/webstore-chat',     require('./routes/webstoreChatRoutes'));
 
-// MongoDB Connection
+// DB Connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,

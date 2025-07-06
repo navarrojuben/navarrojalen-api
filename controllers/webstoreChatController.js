@@ -9,11 +9,31 @@ const sendMessage = async (req, res) => {
   }
 
   try {
+    if (sender === 'user') {
+      // Fetch latest 10 messages to check message streak
+      const recentMessages = await WebstoreChat.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+      let consecutiveUserMessages = 0;
+      for (let msg of recentMessages) {
+        if (msg.sender === 'admin') break;
+        if (msg.sender === 'user') consecutiveUserMessages++;
+      }
+
+      if (consecutiveUserMessages >= 5) {
+        return res.status(403).json({
+          message: 'You have reached the limit of 5 messages. Please wait for admin to respond.',
+        });
+      }
+    }
+
     const newMessage = await WebstoreChat.create({
       user: userId,
       message,
       sender,
     });
+
     res.status(201).json(newMessage);
   } catch (err) {
     res.status(500).json({ message: 'Failed to send message', error: err.message });

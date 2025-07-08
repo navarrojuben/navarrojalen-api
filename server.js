@@ -20,17 +20,23 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
-// CORS Middleware
+// CORS Middleware for Express routes
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins, // Simpler origin check
   credentials: true,
 }));
+
+// Custom CORS middleware to allow all methods and headers for allowed origins
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS'); // Added PATCH and OPTIONS
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Added Authorization
+  next();
+});
 
 // Session Configuration
 app.use(session({
@@ -44,13 +50,14 @@ app.use(session({
   },
 }));
 
-app.use(express.json());
+app.use(express.json()); // For parsing application/json
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
 // 🔌 Socket.io
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
+    origin: allowedOrigins, // Socket.io CORS also uses the allowedOrigins array
+    methods: ['GET', 'POST'], // Keep methods explicitly defined for Socket.io if needed
     credentials: true,
   },
 });
@@ -156,23 +163,23 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/projects',         require('./routes/projectRoutes'));
-app.use('/api/links',            require('./routes/linkRoutes'));
-app.use('/api/codes',            require('./routes/codeRoutes'));
-app.use('/api/messages',         require('./routes/messageRoutes'));
-app.use('/api/dates',            require('./routes/dateRoutes'));
-app.use('/api/notes',            require('./routes/noteRoutes'));
-app.use('/api/images',           require('./routes/imageRoute'));
-app.use('/api/presentations',    require('./routes/presentationRoutes'));
+app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api/links', require('./routes/linkRoutes'));
+app.use('/api/codes', require('./routes/codeRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/dates', require('./routes/dateRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/images', require('./routes/imageRoute'));
+app.use('/api/presentations', require('./routes/presentationRoutes'));
 app.use('/api/image-categories', require('./routes/imageCategoryRoutes'));
-app.use('/api/resume',           require('./routes/resumeRoutes'));
-app.use('/api/',                 require('./routes/resumeRoutes'));
+app.use('/api/resume', require('./routes/resumeRoutes'));
 
-app.use('/api/webstore-users',    require('./routes/webstoreUserRoutes'));
+
+app.use('/api/webstore-users', require('./routes/webstoreUserRoutes'));
 app.use('/api/webstore-services', require('./routes/webstoreServiceRoutes'));
-app.use('/api/webstore-credits',  require('./routes/webstoreCreditRoutes'));
-app.use('/api/webstore-orders',   require('./routes/webstoreOrderRoutes'));
-app.use('/api/webstore-chat',     require('./routes/webstoreChatRoutes'));
+app.use('/api/webstore-credits', require('./routes/webstoreCreditRoutes'));
+app.use('/api/webstore-orders', require('./routes/webstoreOrderRoutes'));
+app.use('/api/webstore-chat', require('./routes/webstoreChatRoutes'));
 
 // DB Connection
 mongoose.connect(process.env.MONGO_URI, {

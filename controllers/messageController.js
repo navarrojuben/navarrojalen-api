@@ -15,7 +15,8 @@ const createMessage = async (req, res) => {
       return res.status(400).json({ error: 'Inbox is full. Please try again later.' });
     }
 
-    const newMessage = new Message({ name, email, message });
+    // When creating a new message, it's always unread by default
+    const newMessage = new Message({ name, email, message, read: false });
     await newMessage.save();
     res.status(200).json({ message: 'Message saved successfully.' });
   } catch (err) {
@@ -50,6 +51,39 @@ const deleteMessage = async (req, res) => {
   }
 };
 
+// Mark a message as read
+const markMessageAsRead = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const updatedMessage = await Message.findByIdAndUpdate(
+      id,
+      { read: true },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedMessage) {
+      return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    res.status(200).json({ message: 'Message marked as read.', updatedMessage });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark message as read.' });
+  }
+};
+
+
+// Get count of unread messages
+const getUnreadMessageCount = async (req, res) => {
+  try {
+    const count = await Message.countDocuments({ read: false });
+    res.status(200).json({ count });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch unread message count.' });
+  }
+};
+
+// Existing getMessageCount (can be removed if only unread count is needed client-side)
 const getMessageCount = async (req, res) => {
   try {
     const count = await Message.countDocuments();
@@ -59,9 +93,12 @@ const getMessageCount = async (req, res) => {
   }
 };
 
+
 module.exports = {
   createMessage,
   getMessages,
   deleteMessage,
+  markMessageAsRead, // Added new function
+  getUnreadMessageCount, // Added new function for sidebar badge
   getMessageCount,
 };

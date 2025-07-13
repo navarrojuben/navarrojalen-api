@@ -163,6 +163,7 @@ app.use('/api/messages',         require('./routes/messageRoutes'));
 app.use('/api/dates',            require('./routes/dateRoutes'));
 app.use('/api/notes',            require('./routes/noteRoutes'));
 app.use('/api/images',           require('./routes/imageRoute'));
+app.use('/api/videos',           require('./routes/videoRoutes'));
 app.use('/api/presentations',    require('./routes/presentationRoutes'));
 app.use('/api/image-categories', require('./routes/imageCategoryRoutes'));
 app.use('/api/resume',           require('./routes/resumeRoutes'));

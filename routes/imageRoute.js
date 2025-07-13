@@ -9,6 +9,7 @@ const {
   uploadImage,
   updateImage,
   deleteImage,
+  getDailyUploadCount, // <--- Import the new function
 } = require('../controllers/imageController');
 
 const router = express.Router();
@@ -36,5 +37,10 @@ router.get('/', getImages);
 router.post('/', upload.single('photo'), uploadImage);
 router.patch('/:id', updateImage);
 router.delete('/:id', deleteImage);
+
+// --- NEW ROUTE ---
+// Route to get the count of images uploaded today
+router.get('/daily-upload-count', getDailyUploadCount);
+// --- END NEW ROUTE ---
 
 module.exports = router;

@@ -1,41 +1,54 @@
-const cloudinary = require('cloudinary').v2;
-const Image = require('../models/imageModel');
+const Video = require('../models/videoModel');
 const ImageCategory = require('../models/imageCategoryModel');
 
-// GET all images
-exports.getImages = async (req, res) => {
+// GET all videos
+exports.getVideos = async (req, res) => {
   try {
-    const images = await Image.find()
+    const videos = await Video.find({
+      url: { $regex: /\.(mp4|mov|avi|webm|mkv)$/i },
+    })
       .sort({ createdAt: -1 })
       .populate('imageCategories');
-    res.json(images);
+
+    res.json(videos);
   } catch (err) {
     console.error('Fetch error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-// POST upload image
-exports.uploadImage = async (req, res) => {
+// POST upload video
+exports.uploadVideo = async (req, res) => {
   try {
     const { name, description } = req.body;
 
+    // Sanitize tags
     const rawTags = req.body.tags;
-    const rawCategories = req.body.imageCategories;
-
     const tags = Array.isArray(rawTags)
       ? rawTags
       : typeof rawTags === 'string'
       ? JSON.parse(rawTags)
       : [];
 
+    // Sanitize imageCategories
+    const rawCategories = req.body.imageCategories;
     const imageCategories = Array.isArray(rawCategories)
-      ? rawCategories
+      ? rawCategories.filter(id => id && id.trim())
       : typeof rawCategories === 'string'
-      ? JSON.parse(rawCategories)
+      ? JSON.parse(rawCategories).filter(id => id && id.trim())
       : [];
 
-    const image = new Image({
+    // Validate file
+    if (!req.file) {
+      return res.status(400).json({ message: 'No video file uploaded' });
+    }
+
+    const isVideo = /\.(mp4|mov|avi|webm|mkv)$/i.test(req.file.path);
+    if (!isVideo) {
+      return res.status(400).json({ message: 'Invalid video file format' });
+    }
+
+    const video = new Video({
       name,
       description: description || '',
       tags,
@@ -44,13 +57,13 @@ exports.uploadImage = async (req, res) => {
       public_id: req.file.filename,
     });
 
-    const saved = await image.save();
+    const saved = await video.save();
 
-    // Push image to each selected category's `images` array
+    // Push video ID to each selected category
     await Promise.all(
       imageCategories.map(catId =>
         ImageCategory.findByIdAndUpdate(catId, {
-          $addToSet: { images: saved._id }
+          $addToSet: { images: saved._id },
         })
       )
     );
@@ -63,8 +76,8 @@ exports.uploadImage = async (req, res) => {
   }
 };
 
-// PATCH update image
-exports.updateImage = async (req, res) => {
+// PATCH update video
+exports.updateVideo = async (req, res) => {
   try {
     const { name, description, tags, imageCategories } = req.body;
 
@@ -75,39 +88,39 @@ exports.updateImage = async (req, res) => {
       : [];
 
     const newCategories = Array.isArray(imageCategories)
-      ? imageCategories
+      ? imageCategories.filter(id => id && id.trim())
       : typeof imageCategories === 'string'
-      ? JSON.parse(imageCategories)
+      ? JSON.parse(imageCategories).filter(id => id && id.trim())
       : [];
 
-    const image = await Image.findById(req.params.id);
-    if (!image) return res.status(404).json({ message: 'Image not found' });
+    const video = await Video.findById(req.params.id);
+    if (!video) return res.status(404).json({ message: 'Video not found' });
 
-    const prevCategories = image.imageCategories.map(id => id.toString());
+    const prevCategories = video.imageCategories.map(id => id.toString());
 
-    image.name = name || image.name;
-    image.description = description || image.description;
-    image.tags = tagArray;
-    image.imageCategories = newCategories;
+    video.name = name || video.name;
+    video.description = description || video.description;
+    video.tags = tagArray;
+    video.imageCategories = newCategories;
 
-    const updated = await image.save();
+    const updated = await video.save();
 
-    // Remove image from deselected categories
+    // Remove from old categories
     const removedCategories = prevCategories.filter(id => !newCategories.includes(id));
     await Promise.all(
       removedCategories.map(catId =>
         ImageCategory.findByIdAndUpdate(catId, {
-          $pull: { images: image._id }
+          $pull: { images: video._id },
         })
       )
     );
 
-    // Add image to newly selected categories
+    // Add to new categories
     const addedCategories = newCategories.filter(id => !prevCategories.includes(id));
     await Promise.all(
       addedCategories.map(catId =>
         ImageCategory.findByIdAndUpdate(catId, {
-          $addToSet: { images: image._id }
+          $addToSet: { images: video._id },
         })
       )
     );
@@ -120,62 +133,54 @@ exports.updateImage = async (req, res) => {
   }
 };
 
-// DELETE image
-exports.deleteImage = async (req, res) => {
+// DELETE video
+exports.deleteVideo = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const image = await Image.findById(id);
-    if (!image) {
-      return res.status(404).json({ success: false, message: 'Image not found' });
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ success: false, message: 'Video not found' });
     }
 
-    // Delete from Cloudinary
-    const result = await cloudinary.uploader.destroy(image.public_id);
+    const cloudinary = require('cloudinary').v2;
+    const result = await cloudinary.uploader.destroy(video.public_id, {
+      resource_type: 'video',
+    });
+
     if (result.result !== 'ok') {
       return res.status(400).json({ success: false, message: 'Failed to delete from Cloudinary' });
     }
 
-    // Remove image ID from all categories
     await ImageCategory.updateMany(
-      { images: image._id },
-      { $pull: { images: image._id } }
+      { images: video._id },
+      { $pull: { images: video._id } }
     );
 
-    await Image.findByIdAndDelete(id);
-    res.json({ success: true, message: 'Image deleted successfully' });
+    await Video.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Video deleted successfully' });
   } catch (error) {
     console.error('Delete error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };
 
-// --- NEW: Get Daily Upload Count ---
-/**
- * @desc Get the count of images uploaded today (based on createdAt timestamp)
- * @route GET /api/images/daily-upload-count
- * @access Public (or Private, if you add authentication middleware)
- */
+// Daily upload count
 exports.getDailyUploadCount = async (req, res) => {
   try {
-    const startOfToday = new Date();
-    // Set to the beginning of the current day in the server's local time (PST)
-    startOfToday.setHours(0, 0, 0, 0);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
 
-    const endOfToday = new Date();
-    // Set to the end of the current day in the server's local time (PST)
-    endOfToday.setHours(23, 59, 59, 999);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
 
-    const count = await Image.countDocuments({
-      createdAt: {
-        $gte: startOfToday, // Greater than or equal to 2025-07-10 00:00:00.000 PST
-        $lte: endOfToday,   // Less than or equal to 2025-07-10 23:59:59.999 PST
-      },
+    const count = await Video.countDocuments({
+      createdAt: { $gte: start, $lte: end },
     });
 
     res.status(200).json({ count });
   } catch (err) {
-    console.error('Error fetching daily upload count:', err);
+    console.error('Error fetching daily video upload count:', err);
     res.status(500).json({ error: 'Failed to fetch daily upload count.' });
   }
 };

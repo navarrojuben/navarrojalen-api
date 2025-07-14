@@ -6,6 +6,7 @@ const session = require('express-session');
 const http = require('http');
 const { Server } = require('socket.io');
 const WebstoreChat = require('./models/webstoreChatModel');
+const WebstoreUser = require('./models/webstoreUserModel'); // Assuming this is your user model
 
 dotenv.config();
 
@@ -53,11 +54,14 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  maxHttpBufferSize: 50 * 1024 * 1024
 });
 
 const onlineUsers = new Map(); // userId => socket.id
 
 io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+
   // JOIN room
   socket.on('join', async ({ userId, isAdmin }) => {
     socket.userId = userId;
@@ -66,6 +70,7 @@ io.on('connection', (socket) => {
     if (isAdmin) {
       socket.join('admin-room');
       socket.emit('user-online', Array.from(onlineUsers.keys()));
+      console.log(`Admin ${userId} joined admin-room.`);
     } else {
       socket.join(userId);
       onlineUsers.set(userId, socket.id);
@@ -100,12 +105,22 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Send message
-  socket.on('send-message', async ({ userId, message, sender }) => {
-    if (!userId || !message || !sender) return;
+  // Send message - MODIFIED TO ACCEPT imageUrls (array)
+  socket.on('send-message', async ({ userId, message, sender, imageUrls }) => { // Changed imageUrl to imageUrls
+    // Validation: userId and sender are required. Either message OR imageUrls must be present.
+    if (!userId || !sender || (!message && (!imageUrls || imageUrls.length === 0))) {
+      console.warn('Invalid message data received (text or images missing):', { userId, message, sender, imageUrls });
+      return;
+    }
 
     try {
-      const newMessage = await WebstoreChat.create({ user: userId, message, sender });
+      const newMessage = await WebstoreChat.create({
+        user: userId,
+        message: message || undefined, // Set to undefined if empty
+        imageUrls: (imageUrls && imageUrls.length > 0) ? imageUrls : undefined, // Assign array or undefined
+        sender: sender,
+        read: false,
+      });
       const formatted = {
         ...newMessage.toObject(),
         _id: newMessage._id.toString(),
@@ -116,11 +131,16 @@ io.on('connection', (socket) => {
       io.to(userId).emit('new-message', formatted);
       io.to('admin-room').emit('new-message', formatted);
 
-      if (sender === 'admin') {
-        io.to('admin-room').emit('message-read', { userId });
+      if (imageUrls && imageUrls.length > 0) {
+        console.log(`[Image Message] From ${sender} (${userId}): ${imageUrls.join(', ')}`);
       }
+      if (message) {
+        console.log(`[Text Message] From ${sender} (${userId}): "${message}"`);
+      }
+
     } catch (err) {
       console.error('❌ Send message error:', err.message);
+      socket.emit('chat-error', 'Failed to send message.');
     }
   });
 
@@ -136,13 +156,26 @@ io.on('connection', (socket) => {
   });
 
   // Mark as read
-  socket.on('mark-read', ({ userId }) => {
-    io.to('admin-room').emit('message-read', { userId });
-    io.to(userId).emit('message-read-confirmed');
+  socket.on('mark-read', async ({ userId }) => {
+    if (!userId) return;
+
+    try {
+      await WebstoreChat.updateMany(
+        { user: userId, sender: 'admin', read: false },
+        { $set: { read: true } }
+      );
+      console.log(`Messages from admin to user ${userId} marked as read.`);
+
+      io.to('admin-room').emit('message-read-confirmed', { userId });
+      io.to(userId).emit('message-read-confirmed');
+    } catch (err) {
+      console.error('❌ Mark read error:', err.message);
+    }
   });
 
   // Disconnect handler
   socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${socket.id}`);
     if (socket.userId && !socket.isAdmin) {
       onlineUsers.delete(socket.userId);
       io.to('admin-room').emit('user-online', Array.from(onlineUsers.keys()));
@@ -156,24 +189,24 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/projects',         require('./routes/projectRoutes'));
-app.use('/api/links',            require('./routes/linkRoutes'));
-app.use('/api/codes',            require('./routes/codeRoutes'));
-app.use('/api/messages',         require('./routes/messageRoutes'));
-app.use('/api/dates',            require('./routes/dateRoutes'));
-app.use('/api/notes',            require('./routes/noteRoutes'));
-app.use('/api/images',           require('./routes/imageRoute'));
-app.use('/api/videos',           require('./routes/videoRoutes'));
-app.use('/api/presentations',    require('./routes/presentationRoutes'));
+app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api/links', require('./routes/linkRoutes'));
+app.use('/api/codes', require('./routes/codeRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/dates', require('./routes/dateRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/images', require('./routes/imageRoute'));
+app.use('/api/videos', require('./routes/videoRoutes'));
+app.use('/api/presentations', require('./routes/presentationRoutes'));
 app.use('/api/image-categories', require('./routes/imageCategoryRoutes'));
-app.use('/api/resume',           require('./routes/resumeRoutes'));
-app.use('/api/',                 require('./routes/resumeRoutes'));
+app.use('/api/resume', require('./routes/resumeRoutes'));
+app.use('/api/', require('./routes/resumeRoutes'));
 
-app.use('/api/webstore-users',    require('./routes/webstoreUserRoutes'));
+app.use('/api/webstore-users', require('./routes/webstoreUserRoutes'));
 app.use('/api/webstore-services', require('./routes/webstoreServiceRoutes'));
-app.use('/api/webstore-credits',  require('./routes/webstoreCreditRoutes'));
-app.use('/api/webstore-orders',   require('./routes/webstoreOrderRoutes'));
-app.use('/api/webstore-chat',     require('./routes/webstoreChatRoutes'));
+app.use('/api/webstore-credits', require('./routes/webstoreCreditRoutes'));
+app.use('/api/webstore-orders', require('./routes/webstoreOrderRoutes'));
+app.use('/api/webstore-chat', require('./routes/webstoreChatRoutes'));
 
 // DB Connection
 mongoose.connect(process.env.MONGO_URI, {

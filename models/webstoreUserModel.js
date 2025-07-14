@@ -39,9 +39,10 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
 
-  avatar: {
-    type: String,
-    default: '', // Cloudinary URL or placeholder image
+  // Modified to store a generic array of image URLs
+  images: {
+    type: [String], // Array of strings (e.g., Cloudinary URLs for various user-uploaded images)
+    default: [],    // Default to an empty array
   },
 
   role: {
